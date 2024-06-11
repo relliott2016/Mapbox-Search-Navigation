@@ -1,0 +1,29 @@
+## User settings
+xcuserdata/
+
+## Obj-C/Swift specific
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+## Build generated
+DerivedData/
+build/
+*.xcworkspace
+!default.xcworkspace
+!default.xcworkspace/contents.xcworkspacedata
+!default.xcworkspace/contents.xcworkspacedata.xml
+!default.xcworkspace/xcuserdata
+!default.xcworkspace/xcshareddata
+
+# Other
+*.xccheckout
+*.xcscmblueprint
+
+# Obj-C/Swift specific
+*.moved-aside
+*.xcuserstate
+
+# App config
+Config.plist
