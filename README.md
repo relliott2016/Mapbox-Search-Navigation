@@ -1,14 +1,13 @@
 ## MapboxNav
 
-A Swift application that showcases some of the search and turn by turn navigation capabilities of the Mapbox Search SDK v2.0.3 and Navigation SDK v3.0.0
+A navigation application that combines aspects of the iOS Mapkit framework with the Mapbox Search and Navigation iOS SDKs.
 
 ## Features
 
-- Integrates with the Mapbox Navigation SDK for iOS.
-- Integrates with the Mapbox Search UI SDK for iOS.
-- Displays the users current location and navigation route using a satellite streets style map.
-- Display street names and landmark annotations.
-- Plays turn by turn voice audio navigation instructions.
+- Displays the current device location on a Satellite/Street style map, complete with street names and landmark annotations.
+- Includes a comprehensive destination search UX including search Categories, Favorites, and address autofill as the user types.
+- Displays multiple selectable route options with metrics, for a user specified destination.
+- Performs real-time location tracking with audible and visual turn-by-turn navigation instructions.
 
 ## Installation / Setup
 
