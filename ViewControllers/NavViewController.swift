@@ -12,13 +12,14 @@ import MapboxNavigationUIKit
 import MapKit
 
 class NavViewController: UIViewController {
-    let mapView = MapView(frame: .zero)
-    let mapStyle: MapboxMaps.StyleURI = .satelliteStreets
-    let locationManager = CLLocationManager()
-    
-    lazy var annotationsManager = mapView.annotations.makePointAnnotationManager()
-    var currentLocation = CLLocationCoordinate2D()
-    var cameraOptions = CameraOptions()
+    private let mapView = MapView(frame: .zero)
+    private let mapStyle: MapboxMaps.StyleURI = .satelliteStreets
+    private let locationManager = CLLocationManager()
+
+    private lazy var annotationsManager = mapView.annotations.makePointAnnotationManager()
+    private var currentLocation = CLLocationCoordinate2D()
+    private var cameraOptions = CameraOptions()
+    private var navigationHasFinished = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,15 +27,18 @@ class NavViewController: UIViewController {
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
 
+        setupMapView()
+        mapView.location.options.puckType = .puck2D()
+    }
+
+    private func setupMapView() {
         mapView.frame = view.bounds
         mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         mapView.mapboxMap.styleURI = mapStyle
         view.addSubview(mapView)
-
-        mapView.location.options.puckType = .puck2D()
     }
 
-    func showAnnotations(results: [SearchResult], cameraShouldFollow: Bool = true) {
+    private func showAnnotations(results: [SearchResult], cameraShouldFollow: Bool = true) {
         annotationsManager.annotations = results.map(PointAnnotation.init)
 
         if cameraShouldFollow {
@@ -42,13 +46,9 @@ class NavViewController: UIViewController {
         }
     }
 
-    func cameraToAnnotations(_ annotations: [PointAnnotation]) {
+    private func cameraToAnnotations(_ annotations: [PointAnnotation]) {
         if annotations.count == 1, let annotation = annotations.first {
-            mapView.camera.fly(
-                to: .init(center: annotation.point.coordinates, zoom: 15),
-                duration: 0.25,
-                completion: nil
-            )
+            mapView.camera.fly(to: .init(center: annotation.point.coordinates, zoom: 15), duration: 0.25)
         } else {
             let coordinates = annotations.map { $0.point.coordinates }
             let padding = UIEdgeInsets(top: 24, left: 24, bottom: 24, right: 24)
@@ -60,24 +60,51 @@ class NavViewController: UIViewController {
                     maxZoom: nil,
                     offset: .zero
                 )
-                mapView.camera.fly(to: cameraCoordinates, duration: 0.25, completion: nil)
+                mapView.camera.fly(to: cameraCoordinates, duration: 0.25)
             } catch {
                 print("Error: \(error)")
             }
         }
     }
 
-    func showAnnotation(_ result: SearchResult) {
+    private func showAnnotation(_ result: SearchResult) {
         showAnnotations(results: [result])
     }
 
-    func showAnnotation(_ favorite: FavoriteRecord) {
+    private func showAnnotation(_ favorite: FavoriteRecord) {
         annotationsManager.annotations = [PointAnnotation(favoriteRecord: favorite)]
-
         cameraToAnnotations(annotationsManager.annotations)
     }
 
-    func navigateToSearchResult(_ searchResult: SearchResult) {
+    private func beginNaviation() {
+        let searchController = createSearchController()
+        let panelController = MapboxPanelController(rootViewController: searchController)
+
+        configureMapViewOrnaments()
+
+        searchController.delegate = self
+        addChild(panelController)
+    }
+
+    private func createSearchController() ->MapboxSearchController {
+        let locationProvider = PointLocationProvider(coordinate: currentLocation)
+        let formatter = MKDistanceFormatter()
+        formatter.unitStyle = .abbreviated
+        let configuration = Configuration(locationProvider: locationProvider, distanceFormatter: formatter)
+
+        return MapboxSearchController(configuration: configuration)
+    }
+
+    private func configureMapViewOrnaments() {
+        let horizontalMargin: CGFloat = 4
+        mapView.ornaments.options.logo = LogoViewOptions(position: .topLeading, margins: CGPoint(x: horizontalMargin, y: 0))
+        mapView.ornaments.options.attributionButton = AttributionButtonOptions(position: .topLeading, margins: CGPoint(x: 0, y: 4))
+
+        let scalarX = mapView.ornaments.logoView.bounds.maxX + 12
+        mapView.ornaments.options.scaleBar = ScaleBarViewOptions(position: .topLeading, margins: CGPoint(x: scalarX, y: 0), visibility: .hidden, useMetricUnits: false)
+    }
+
+    private func navigateToSearchResult(_ searchResult: SearchResult) {
 
         // Define the Mapbox Navigation entry point.
         let mapboxNavigationProvider = MapboxNavigationProvider(coreConfig: .init())
@@ -93,27 +120,28 @@ class NavViewController: UIViewController {
         Task {
             switch await request.result {
             case .failure(let error):
-                print(error.localizedDescription)
+                showError(error)
             case .success(let navigationRoutes):
-                // Pass the generated navigation routes to the the NavigationViewController
-                let navigationOptions = NavigationOptions(mapboxNavigation: mapboxNavigation,
-                                                          voiceController: mapboxNavigationProvider.routeVoiceController,
-                                                          eventsManager: mapboxNavigationProvider.eventsManager())
-
-                let navigationViewController = NavigationViewController(navigationRoutes: navigationRoutes,
-                                                                        navigationOptions: navigationOptions)
-
-                navigationViewController.navigationMapView?.mapView.mapboxMap.setCamera(to: cameraOptions)
-                navigationViewController.navigationMapView?.mapView.mapboxMap.styleURI = mapStyle
-                navigationViewController.modalPresentationStyle = .fullScreen
-                navigationViewController.delegate = self
-
-                present(navigationViewController, animated: true, completion: nil)
+                presentNavigationViewController(with: navigationRoutes, mapboxNavigationProvider: mapboxNavigationProvider)
             }
         }
     }
 
-    func showError(_ error: Error) {
+    private func presentNavigationViewController(with routes: NavigationRoutes, mapboxNavigationProvider: MapboxNavigationProvider) {
+        let navigationOptions = NavigationOptions(mapboxNavigation: mapboxNavigationProvider.mapboxNavigation,
+                                                          voiceController: mapboxNavigationProvider.routeVoiceController,
+                                                          eventsManager: mapboxNavigationProvider.eventsManager())
+
+        let navigationViewController = NavigationViewController(navigationRoutes: routes, navigationOptions: navigationOptions)
+        navigationViewController.navigationMapView?.mapView.mapboxMap.setCamera(to: cameraOptions)
+        navigationViewController.navigationMapView?.mapView.mapboxMap.styleURI = mapStyle
+        navigationViewController.modalPresentationStyle = .fullScreen
+        navigationViewController.delegate = self
+
+        present(navigationViewController, animated: true)
+    }
+
+    private func showError(_ error: Error) {
         let alertController = UIAlertController(title: nil, message: error.localizedDescription, preferredStyle: .alert)
         alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
 
@@ -133,55 +161,22 @@ extension NavViewController: CLLocationManagerDelegate {
         case .notDetermined:
             print("Location access not determined")
         @unknown default:
-            fatalError()
+            fatalError("Unknown authorization status")
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         manager.stopUpdatingLocation()
-        
-        currentLocation = CLLocationCoordinate2D(latitude: locations.first?.coordinate.latitude ?? 45.51806,
-                                                 longitude: locations.first?.coordinate.longitude ?? -75.79369)
-        
+        guard let lastLocation = locations.last else { return }
+
+        currentLocation = lastLocation.coordinate
+
         cameraOptions = CameraOptions(center: currentLocation, zoom: 17)
         mapView.camera.fly(to: cameraOptions, duration: 4, completion: nil)
-        
-        lazy var searchController: MapboxSearchController = {
-            let locationProvider = PointLocationProvider(coordinate: currentLocation)
-            let formatter = MKDistanceFormatter()
-            formatter.unitStyle = .abbreviated
-            var configuration = Configuration(
-                locationProvider: locationProvider,
-                distanceFormatter: formatter
-            )
-            
-            return MapboxSearchController(configuration: configuration)
-        }()
-        
-        let panelController = MapboxPanelController(rootViewController: searchController)
-        
-        let horizontalMargin: CGFloat = 4
-        mapView.ornaments.options.logo = LogoViewOptions(
-            position: .topLeading,
-            margins: CGPoint(x: horizontalMargin, y: 0)
-        )
-        
-        
-        mapView.ornaments.options.attributionButton = AttributionButtonOptions(
-            position: .topLeading,
-            margins: CGPoint(x: 0, y: 4)
-        )
-        
-        let scalarX = mapView.ornaments.logoView.bounds.maxX + 12
-        mapView.ornaments.options.scaleBar = ScaleBarViewOptions(
-            position: .topLeading,
-            margins: CGPoint(x: scalarX, y: 0),
-            visibility: .hidden,
-            useMetricUnits: false
-        )
-        
-        searchController.delegate = self
-        addChild(panelController)
+
+        if !navigationHasFinished {
+            beginNaviation()
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
@@ -208,7 +203,8 @@ extension NavViewController: NavigationViewControllerDelegate {
     func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
         self.dismiss(animated: true) { [weak self] in
             guard let self = self else { return }
-            self.mapView.camera.fly(to: self.cameraOptions, duration: 4, completion: nil)
+            navigationHasFinished = true
+            locationManager.startUpdatingLocation()
         }
     }
 }
