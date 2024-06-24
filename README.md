@@ -1,7 +1,3 @@
-## MapboxNav
-
-A navigation application that combines aspects of the iOS Mapkit framework with the Mapbox Search and Navigation iOS SDKs.
-
 ## Features
 
 - Displays the current device location on a Satellite/Street style map, complete with street names and landmark annotations.
