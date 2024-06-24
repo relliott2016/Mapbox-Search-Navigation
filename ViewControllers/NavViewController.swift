@@ -12,6 +12,8 @@ import MapboxNavigationUIKit
 import MapKit
 
 class NavViewController: UIViewController {
+    private let flyDuration = 2.5
+    private let flyZoom = 16.0
     private let mapView = MapView(frame: .zero)
     private let mapStyle: MapboxMaps.StyleURI = .satelliteStreets
     private let locationManager = CLLocationManager()
@@ -19,7 +21,6 @@ class NavViewController: UIViewController {
     private lazy var annotationsManager = mapView.annotations.makePointAnnotationManager()
     private var currentLocation = CLLocationCoordinate2D()
     private var cameraOptions = CameraOptions()
-    private var navigationHasFinished = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,7 +49,7 @@ class NavViewController: UIViewController {
 
     private func cameraToAnnotations(_ annotations: [PointAnnotation]) {
         if annotations.count == 1, let annotation = annotations.first {
-            mapView.camera.fly(to: .init(center: annotation.point.coordinates, zoom: 15), duration: 0.25)
+            mapView.camera.fly(to: .init(center: annotation.point.coordinates, zoom: flyZoom), duration: flyDuration)
         } else {
             let coordinates = annotations.map { $0.point.coordinates }
             let padding = UIEdgeInsets(top: 24, left: 24, bottom: 24, right: 24)
@@ -60,7 +61,7 @@ class NavViewController: UIViewController {
                     maxZoom: nil,
                     offset: .zero
                 )
-                mapView.camera.fly(to: cameraCoordinates, duration: 0.25)
+                mapView.camera.fly(to: cameraCoordinates, duration: flyDuration)
             } catch {
                 print("Error: \(error)")
             }
@@ -76,14 +77,18 @@ class NavViewController: UIViewController {
         cameraToAnnotations(annotationsManager.annotations)
     }
 
-    private func beginNaviation() {
-        let searchController = createSearchController()
-        let panelController = MapboxPanelController(rootViewController: searchController)
+    private func setupSearchUI() {
 
-        configureMapViewOrnaments()
+        let isPanelControllerAdded = children.contains { $0 is MapboxPanelController }
+        if !isPanelControllerAdded {
+            let searchController = createSearchController()
+            let panelController = MapboxPanelController(rootViewController: searchController)
 
-        searchController.delegate = self
-        addChild(panelController)
+            configureMapViewOrnaments()
+
+            searchController.delegate = self
+            addChild(panelController)
+        }
     }
 
     private func createSearchController() ->MapboxSearchController {
@@ -143,9 +148,9 @@ class NavViewController: UIViewController {
 
     private func showError(_ error: Error) {
         let alertController = UIAlertController(title: nil, message: error.localizedDescription, preferredStyle: .alert)
-        alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        alertController.addAction(UIAlertAction(title: "OK", style: .default))
 
-        present(alertController, animated: true, completion: nil)
+        present(alertController, animated: true)
     }
 }
 
@@ -171,12 +176,9 @@ extension NavViewController: CLLocationManagerDelegate {
 
         currentLocation = lastLocation.coordinate
 
-        cameraOptions = CameraOptions(center: currentLocation, zoom: 17)
-        mapView.camera.fly(to: cameraOptions, duration: 4, completion: nil)
-
-        if !navigationHasFinished {
-            beginNaviation()
-        }
+        cameraOptions = CameraOptions(center: currentLocation, zoom: flyZoom)
+        mapView.camera.fly(to: cameraOptions, duration: flyDuration)
+        setupSearchUI()
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
@@ -203,7 +205,6 @@ extension NavViewController: NavigationViewControllerDelegate {
     func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
         self.dismiss(animated: true) { [weak self] in
             guard let self = self else { return }
-            navigationHasFinished = true
             locationManager.startUpdatingLocation()
         }
     }
@@ -225,7 +226,6 @@ extension NavViewController: SearchControllerDelegate {
     func userFavoriteSelected(_ userFavorite: FavoriteRecord) {
         showAnnotation(userFavorite)
     }
-
 }
 
 extension PointAnnotation {
