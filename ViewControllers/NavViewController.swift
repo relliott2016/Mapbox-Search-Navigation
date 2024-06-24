@@ -78,7 +78,6 @@ class NavViewController: UIViewController {
     }
 
     private func setupSearchUI() {
-
         let isPanelControllerAdded = children.contains { $0 is MapboxPanelController }
         if !isPanelControllerAdded {
             let searchController = createSearchController()
