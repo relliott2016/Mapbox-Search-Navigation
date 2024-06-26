@@ -13,7 +13,7 @@ import MapKit
 
 class NavViewController: UIViewController {
     private let flyDuration = 2.5
-    private let flyZoom = 16.0
+    private let cameraZoom = 16.0
     private let mapView = MapView(frame: .zero)
     private let mapStyle: MapboxMaps.StyleURI = .satelliteStreets
     private let locationManager = CLLocationManager()
@@ -49,7 +49,7 @@ class NavViewController: UIViewController {
 
     private func cameraToAnnotations(_ annotations: [PointAnnotation]) {
         if annotations.count == 1, let annotation = annotations.first {
-            mapView.camera.fly(to: .init(center: annotation.point.coordinates, zoom: flyZoom), duration: flyDuration)
+            mapView.camera.fly(to: .init(center: annotation.point.coordinates, zoom: cameraZoom), duration: flyDuration)
         } else {
             let coordinates = annotations.map { $0.point.coordinates }
             let padding = UIEdgeInsets(top: 24, left: 24, bottom: 24, right: 24)
@@ -175,7 +175,7 @@ extension NavViewController: CLLocationManagerDelegate {
 
         currentLocation = lastLocation.coordinate
 
-        cameraOptions = CameraOptions(center: currentLocation, zoom: flyZoom)
+        cameraOptions = CameraOptions(center: currentLocation, zoom: cameraZoom)
         mapView.camera.fly(to: cameraOptions, duration: flyDuration)
         setupSearchUI()
     }
