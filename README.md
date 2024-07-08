@@ -19,6 +19,10 @@
 
 5. Build and run the app in the simulator or on your device.
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ## Screenshots
 
 <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-1.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-2.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-3.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-4.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-5.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-6.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-7.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-8.png" width=30% height=30%>          <img src="https://github.com/relliott2016/Mapbox-Search-Navigation/blob/master/Screenshots/Screen-9.png" width=30% height=30%>
